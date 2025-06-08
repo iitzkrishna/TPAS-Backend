@@ -30,5 +30,9 @@ class DatabaseSeeder extends Seeder
 
         // Create 100 tourists
         User::factory()->tourist()->count(100)->create();
+
+        $this->call([
+            LocationSeeder::class,
+        ]);
     }
 }

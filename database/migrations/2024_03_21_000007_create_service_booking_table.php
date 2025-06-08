@@ -19,6 +19,13 @@ return new class extends Migration
             $table->integer('childrens')->default(0);
             $table->decimal('total_charge', 10, 2);
             $table->timestamps();
+
+            // Add indexes
+            $table->index('service_id');
+            $table->index('tourist_id');
+            $table->index('request');
+            $table->index(['pref_start_date', 'pref_end_date']);
+            $table->index('total_charge');
         });
     }
 

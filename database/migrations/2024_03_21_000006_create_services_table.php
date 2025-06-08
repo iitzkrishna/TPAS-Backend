@@ -23,6 +23,14 @@ return new class extends Migration
             $table->double('location_longitude');
             $table->json('availability')->nullable();
             $table->timestamps();
+
+            // Add indexes
+            $table->index('sp_id');
+            $table->index('type');
+            $table->index('status_visibility');
+            $table->index('amount');
+            $table->index(['location_latitude', 'location_longitude']);
+            $table->index('discount_expires_on');
         });
     }
 

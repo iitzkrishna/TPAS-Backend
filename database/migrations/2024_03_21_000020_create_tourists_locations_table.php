@@ -15,6 +15,11 @@ return new class extends Migration
             $table->double('longtitude');
             $table->enum('is_help_needed', ['yes', 'no'])->default('no');
             $table->timestamps();
+
+            // Add indexes
+            $table->index('tourist_id');
+            $table->index(['latitude', 'longtitude']);
+            $table->index('is_help_needed');
         });
     }
 
