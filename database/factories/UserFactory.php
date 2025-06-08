@@ -24,10 +24,21 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
+            'first_name' => fake()->firstName(),
+            'last_name' => fake()->lastName(),
+            'user_name' => fake()->unique()->userName(),
+            'gender' => fake()->randomElement(['male', 'female', 'other']),
+            'contact_primary' => fake()->phoneNumber(),
+            'contact_secondary' => fake()->optional()->phoneNumber(),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
+            'password' => Hash::make('password'), // password
+            'user_type' => fake()->randomElement(['tourist', 'service_provider', 'admin']),
+            'avatar' => fake()->optional()->imageUrl(),
+            'is_verified' => fake()->boolean(80), // 80% chance of being verified
+            'nationality' => fake()->country(),
+            'primary_language' => fake()->languageCode(),
+            'secondary_language' => fake()->optional()->languageCode(),
             'remember_token' => Str::random(10),
         ];
     }
@@ -39,6 +50,27 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    public function tourist(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'user_type' => 'tourist',
+        ]);
+    }
+
+    public function serviceProvider(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'user_type' => 'service_provider',
+        ]);
+    }
+
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'user_type' => 'admin',
         ]);
     }
 }
