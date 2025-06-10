@@ -14,8 +14,27 @@ class District extends Model
         'province_id'
     ];
 
+    /**
+     * Get the province that owns the district.
+     */
     public function province()
     {
         return $this->belongsTo(Province::class, 'province_id', 'province_id');
+    }
+
+    /**
+     * Get the services in this district.
+     */
+    public function services()
+    {
+        return $this->hasMany(Service::class);
+    }
+
+    /**
+     * Get the places in this district.
+     */
+    public function places()
+    {
+        return $this->hasMany(Place::class);
     }
 } 

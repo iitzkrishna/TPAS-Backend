@@ -12,7 +12,7 @@ use Illuminate\Validation\ValidationException;
 use App\Models\User;
 use Carbon\Carbon;
 
-class AuthSPController extends Controller
+class PartnersController extends Controller
 {
     /**
      * Create a new AuthSPController instance.
@@ -21,7 +21,7 @@ class AuthSPController extends Controller
      */
     public function __construct()
     {
-        $this->middleware('auth:api', ['except' => ['login', 'register', 'forgotPassword', 'resetPassword', 'verifyEmail', 'createPassword']]);
+        $this->middleware('jwt.verify', ['except' => ['login', 'register', 'forgotPassword', 'resetPassword', 'verifyEmail', 'createPassword']]);
     }
 
     /**

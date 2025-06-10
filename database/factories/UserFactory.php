@@ -33,7 +33,7 @@ class UserFactory extends Factory
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => Hash::make('password'), // password
-            'user_type' => fake()->randomElement(['tourist', 'service_provider', 'admin']),
+            'user_type' => fake()->randomElement(['tourist', 'partner', 'admin']),
             'avatar' => fake()->optional()->imageUrl(),
             'is_verified' => fake()->boolean(80), // 80% chance of being verified
             'nationality' => fake()->country(),
@@ -60,10 +60,10 @@ class UserFactory extends Factory
         ]);
     }
 
-    public function serviceProvider(): static
+    public function partner(): static
     {
         return $this->state(fn (array $attributes) => [
-            'user_type' => 'service_provider',
+            'user_type' => 'partner',
         ]);
     }
 

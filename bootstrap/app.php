@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use App\Http\Middleware\AuthJWTMiddleware;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -11,7 +12,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/healthz',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        //
+        $middleware->alias([
+            'jwt' => AuthJWTMiddleware::class
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

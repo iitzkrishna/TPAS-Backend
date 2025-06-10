@@ -2,10 +2,14 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Auth\AuthController;
-use App\Http\Controllers\Auth\AuthSPController;
+use App\Http\Middleware\AuthJWTMiddleware;
+use App\Http\Controllers\Auth\AdminController;
+use App\Http\Controllers\Auth\TouristsController;
+use App\Http\Controllers\Auth\PartnersController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\TouristSOSController;
+use App\Http\Controllers\Partners\ServiceController;
+use App\Http\Controllers\Public\ServiceController as PublicServiceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -13,49 +17,74 @@ use App\Http\Controllers\TouristSOSController;
 |--------------------------------------------------------------------------
 */
 
-// Tourist Routes (Main User Routes)
-// Public routes
-Route::post('register', [AuthController::class, 'register']);
-Route::post('login', [AuthController::class, 'login']);
-Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
-Route::post('reset-password', [AuthController::class, 'resetPassword']);
-Route::post('verify-email', [AuthController::class, 'verifyEmail']);
-Route::post('create-password', [AuthController::class, 'createPassword']);
+// Admin Routes
+Route::prefix('auth')->group(function () {
+    // Public routes
+    Route::post('login', [AdminController::class, 'login']);
 
-// Protected Tourist Routes
-Route::middleware('auth:api')->group(function () {
-    Route::post('logout', [AuthController::class, 'logout']);
-    Route::post('refresh', [AuthController::class, 'refresh']);
-    Route::get('user', [AuthController::class, 'user']);
-    Route::put('profile', [AuthController::class, 'updateProfile']);
-    Route::put('change-password', [AuthController::class, 'changePassword']);
+    // Protected Admin Routes
+    Route::middleware('auth:api')->group(function () {
+        Route::post('logout', [AdminController::class, 'logout']);
+        Route::post('refresh', [AdminController::class, 'refresh']);
+        Route::get('user', [AdminController::class, 'user']);
+    });
+});
 
-    // Tourist specific routes
-    // Route::post('location', [TouristSOSController::class, 'updateLocation']);
-    // Route::get('location', [TouristSOSController::class, 'getCurrentLocation']);
-    // Route::get('location/history', [TouristSOSController::class, 'getLocationHistory']);
+// Tourist Routes
+Route::prefix('auth/tourist')->group(function () {
+    // Public routes
+    Route::post('register', [TouristsController::class, 'register']);
+    Route::post('login', [TouristsController::class, 'login']);
+    Route::post('forgot-password', [TouristsController::class, 'forgotPassword']);
+    Route::post('reset-password', [TouristsController::class, 'resetPassword']);
+    Route::post('verify-email', [TouristsController::class, 'verifyEmail']);
+    Route::post('create-password', [TouristsController::class, 'createPassword']);
+
+    // Protected Tourist Routes
+    Route::middleware('auth:api')->group(function () {
+        Route::post('logout', [TouristsController::class, 'logout']);
+        Route::post('refresh', [TouristsController::class, 'refresh']);
+        Route::get('user', [TouristsController::class, 'user']);
+        Route::put('profile', [TouristsController::class, 'updateProfile']);
+        Route::put('change-password', [TouristsController::class, 'changePassword']);
+
+        // Tourist specific routes
+        // Route::post('location', [TouristSOSController::class, 'updateLocation']);
+        // Route::get('location', [TouristSOSController::class, 'getCurrentLocation']);
+        // Route::get('location/history', [TouristSOSController::class, 'getLocationHistory']);
+    });
 });
 
 // Service Provider Routes
-Route::prefix('sp')->group(function () {
+Route::prefix('auth/partner')->group(function () {
     // Public routes
-    Route::post('register', [AuthSPController::class, 'register']);
-    Route::post('login', [AuthSPController::class, 'login']);
-    Route::post('forgot-password', [AuthSPController::class, 'forgotPassword']);
-    Route::post('reset-password', [AuthSPController::class, 'resetPassword']);
-    Route::post('verify-email', [AuthSPController::class, 'verifyEmail']);
-    Route::post('create-password', [AuthSPController::class, 'createPassword']);
+    Route::post('register', [PartnersController::class, 'register']);
+    Route::post('login', [PartnersController::class, 'login']);
+    Route::post('forgot-password', [PartnersController::class, 'forgotPassword']);
+    Route::post('reset-password', [PartnersController::class, 'resetPassword']);
+    Route::post('verify-email', [PartnersController::class, 'verifyEmail']);
+    Route::post('create-password', [PartnersController::class, 'createPassword']);
 
     // Protected routes
     Route::middleware('auth:api')->group(function () {
-        Route::post('logout', [AuthSPController::class, 'logout']);
-        Route::post('refresh', [AuthSPController::class, 'refresh']);
-        Route::get('user', [AuthSPController::class, 'user']);
-        Route::put('profile', [AuthSPController::class, 'updateProfile']);
-        Route::put('business', [AuthSPController::class, 'updateBusinessInfo']);
-        Route::get('business', [AuthSPController::class, 'getBusinessInfo']);
-        Route::put('change-password', [AuthSPController::class, 'changePassword']);
+        Route::post('logout', [PartnersController::class, 'logout']);
+        Route::post('refresh', [PartnersController::class, 'refresh']);
+        Route::get('user', [PartnersController::class, 'user']);
+        Route::put('profile', [PartnersController::class, 'updateProfile']);
+        Route::put('business', [PartnersController::class, 'updateBusinessInfo']);
+        Route::get('business', [PartnersController::class, 'getBusinessInfo']);
+        Route::put('change-password', [PartnersController::class, 'changePassword']);
     });
+});
+
+// Partner Service Routes
+Route::prefix('partner/services')->middleware(['jwt.auth', 'service.provider'])->group(function () {
+    Route::get('/', [ServiceController::class, 'index']);
+    Route::post('/', [ServiceController::class, 'store']);
+    Route::get('/{service}', [ServiceController::class, 'show']);
+    Route::put('/{service}', [ServiceController::class, 'update']);
+    Route::delete('/{service}', [ServiceController::class, 'destroy']);
+    Route::delete('/{service}/images/{image}', [ServiceController::class, 'deleteServiceImage']);
 });
 
 // Location Routes (Public)
@@ -64,4 +93,10 @@ Route::prefix('locations')->group(function () {
     // Route::get('provinces/{id}', [LocationController::class, 'getProvinceWithDistricts']);
     Route::get('districts', [LocationController::class, 'getDistricts']);
     Route::get('districts/{id}', [LocationController::class, 'getDistrictWithProvince']);
+});
+
+// Public routes
+Route::prefix('public')->group(function () {
+    Route::get('/services', [PublicServiceController::class, 'index']);
+    Route::get('/services/{service}', [PublicServiceController::class, 'show']);
 }); 

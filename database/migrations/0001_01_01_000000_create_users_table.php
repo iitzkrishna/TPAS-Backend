@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->enum('user_type', ['tourist', 'service_provider', 'admin']);
+            $table->enum('user_type', ['tourist', 'partner', 'admin']);
             $table->text('avatar')->nullable();
             $table->boolean('is_verified')->default(false);
             $table->string('nationality')->nullable();

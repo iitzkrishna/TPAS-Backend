@@ -24,26 +24,21 @@ class AuthJWTMiddleware
     public function handle(Request $request, Closure $next): Response
     {
         try {
-            // Attempt to authenticate the request using JWT tokens
-            JWTAuth::parseToken()->authenticate();
+            $user = JWTAuth::parseToken()->authenticate();
         } catch (Exception $e) {
-            // dd($e->getMessage());
-            // Handle different token-related exceptions
             if ($e instanceof \PHPOpenSourceSaver\JWTAuth\Exceptions\TokenInvalidException) {
-                // Return response for invalid tokens
-                return ResponseService::response('UNAUTHORIZED', null, 'Token is Invalid');
+                return response()->json(['status' => 'Token is Invalid'], 403);
             }
             else if ($e instanceof \PHPOpenSourceSaver\JWTAuth\Exceptions\TokenExpiredException) {
-                // Return response for expired tokens
-                return ResponseService::response('UNAUTHORIZED', null, 'Token is Expired');
+                return response()->json(['status' => 'Token is Expired'], 401);
+            }
+            else if ($e instanceof \PHPOpenSourceSaver\JWTAuth\Exceptions\TokenBlacklistedException){
+                return response()->json(['status' => 'Token is Blacklisted'], 400);
             }
             else {
-                // Return response for missing authorization tokens
-                return ResponseService::response('UNAUTHORIZED', null, 'Authorization Token not found');
+		        return response()->json(['status' => 'Authorization Token not found'], 404);
             }
         }
-
-        // Continue with the next middleware or the route handler if authentication is successful
         return $next($request);
     }
 }
