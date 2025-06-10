@@ -12,7 +12,17 @@ return new class extends Migration
             $table->id();
             $table->foreignId('partner_id')->constrained('partners')->onDelete('cascade');
             $table->string('title');
-            $table->enum('type', ['tour', 'accommodation', 'transport', 'activity', 'other']);
+            $table->enum('type', ['stay', 'rental', 'attraction', 'other']);
+            $table->enum('subtype', [
+                // Stay subtypes
+                'hotel', 'apartment', 'villa', 'guest_house', 'beach_house', 'farmhouse',
+                // Rental subtypes
+                'cars', 'vans', 'tuktuk', 'motorcycles', 'airport-taxi', 'yatch', 'boat',
+                // Attraction subtypes
+                'theme_park', 'museum', 'zoo', 'water_park', 'historical_site', 'nature_park', 'national_park',
+                // Other subtypes
+                'other'
+            ])->nullable();
             $table->decimal('amount', 10, 2);
             $table->text('thumbnail')->nullable();
             $table->text('description');
@@ -27,6 +37,7 @@ return new class extends Migration
             // Add indexes
             $table->index('partner_id');
             $table->index('type');
+            $table->index('subtype');
             $table->index('status_visibility');
             $table->index('amount');
             $table->index('district_id');

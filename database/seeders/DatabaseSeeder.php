@@ -61,6 +61,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             LocationSeeder::class,
             ServiceSeeder::class,
+            ServicePackageReviewSeeder::class,
         ]);
     }
 }
