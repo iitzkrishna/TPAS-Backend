@@ -21,7 +21,7 @@ class PartnersController extends Controller
      */
     public function __construct()
     {
-        $this->middleware('jwt.verify', ['except' => ['login', 'register', 'forgotPassword', 'resetPassword', 'verifyEmail', 'createPassword']]);
+        $this->middleware('auth:api', ['except' => ['login', 'register', 'forgotPassword', 'resetPassword', 'verifyEmail', 'createPassword']]);
     }
 
     /**
@@ -30,7 +30,7 @@ class PartnersController extends Controller
     public function register(Request $request)
     {
         $request->validate([
-            'username' => 'required|string|max:50|unique:users',
+            'user_name' => 'required|string|max:50|unique:users',
             'email' => 'required|email|unique:users',
             'password' => 'required|min:8|confirmed',
             'first_name' => 'required|string|max:50',
@@ -46,7 +46,7 @@ class PartnersController extends Controller
         ]);
 
         $user = User::create([
-            'username' => $request->username,
+            'user_name' => $request->user_name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'user_type' => 'service_provider',

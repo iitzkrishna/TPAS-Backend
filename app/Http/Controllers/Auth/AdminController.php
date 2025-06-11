@@ -18,7 +18,7 @@ class AdminController extends Controller
      */
     public function __construct()
     {
-        $this->middleware('jwt.auth', ['except' => ['login']]);
+        $this->middleware('auth:api', ['except' => ['login']]);
     }
 
     /**
@@ -32,9 +32,12 @@ class AdminController extends Controller
         ]);
 
         // First check if user exists and is an admin
-        $user = User::where('username', $request->username)
-            ->where('user_type', 'admin')
-            ->first();
+        $user = User::where(function($query) use ($request) {
+            $query->where('user_name', $request->username)
+                  ->orWhere('email', $request->username);
+        })
+        ->where('user_type', 'admin')
+        ->first();
 
         if (!$user) {
             throw ValidationException::withMessages([
@@ -43,8 +46,17 @@ class AdminController extends Controller
         }
 
         // Attempt login with credentials
-        $credentials = $request->only('username', 'password');
-        $credentials['user_type'] = 'admin';
+        $credentials = [
+            'password' => $request->password,
+            'user_type' => 'admin'
+        ];
+
+        // Check if the input is email or username
+        if (filter_var($request->username, FILTER_VALIDATE_EMAIL)) {
+            $credentials['email'] = $request->username;
+        } else {
+            $credentials['user_name'] = $request->username;
+        }
 
         if (!$token = Auth::attempt($credentials)) {
             throw ValidationException::withMessages([
@@ -56,10 +68,8 @@ class AdminController extends Controller
 
         return response()->json([
             'message' => 'Login successful',
-            'user' => $user,
             'authorization' => [
-                'token' => $token,
-                'type' => 'bearer',
+                'token' => $token
             ]
         ]);
     }
@@ -82,7 +92,6 @@ class AdminController extends Controller
             'user' => Auth::user(),
             'authorization' => [
                 'token' => Auth::refresh(),
-                'type' => 'bearer',
             ]
         ]);
     }

@@ -21,7 +21,7 @@ class TouristsController extends Controller
      */
     public function __construct()
     {
-        $this->middleware('jwt.verify', ['except' => ['login', 'register', 'forgotPassword', 'resetPassword', 'verifyEmail', 'createPassword']]);
+        $this->middleware('auth:api', ['except' => ['login', 'register', 'forgotPassword', 'resetPassword', 'verifyEmail', 'createPassword']]);
     }
 
     /**
