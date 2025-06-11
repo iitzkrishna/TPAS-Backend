@@ -189,7 +189,11 @@ class ServiceController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'data' => $services->items()
+            'data' => $services->items(),
+            'current_page' => $services->currentPage(),
+            'per_page' => $services->perPage(),
+            'total' => $services->total(),
+            'last_page' => $services->lastPage()
         ]);
     }
 
@@ -230,7 +234,11 @@ class ServiceController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'data' => $reviews->items()
+            'data' => $reviews->items(),
+            'current_page' => $reviews->currentPage(),
+            'per_page' => $reviews->perPage(),
+            'total' => $reviews->total(),
+            'last_page' => $reviews->lastPage()
         ]);
     }
 } 
