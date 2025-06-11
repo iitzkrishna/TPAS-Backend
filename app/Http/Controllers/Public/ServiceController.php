@@ -51,8 +51,7 @@ class ServiceController extends Controller
         // Load all related data for single service view
         $service->load([
             'partner' => function($query) {
-                $query->select('id', 'business_id')
-                    ->with(['business:id,name,description,logo']);
+                $query->select('id', 'business_name', 'business_description', 'business_logo');
             },
             'district',
             'images',
@@ -64,9 +63,25 @@ class ServiceController extends Controller
         // Calculate average rating
         $averageRating = $service->reviews->avg('rating');
 
+        // Get service data without timestamps
+        $serviceData = $service->only([
+            'id',
+            'title',
+            'type',
+            'subtype',
+            'amount',
+            'thumbnail',
+            'description',
+            'discount_percentage',
+            'discount_expires_on',
+            'location',
+            'district_id',
+            'status_visibility'
+        ]);
+
         return response()->json([
             'status' => 'success',
-            'data' => array_merge($service->toArray(), [
+            'data' => array_merge($serviceData, [
                 'average_rating' => round($averageRating, 1),
                 'total_reviews' => $service->reviews->count()
             ])
@@ -92,7 +107,8 @@ class ServiceController extends Controller
             'district_id'
         ])
         ->with([
-            'district:district_id,district_name'
+            'district:district_id,district_name',
+            'partner:id,business_name,business_logo'
         ])
         ->where('status_visibility', 'active');
 
@@ -160,15 +176,20 @@ class ServiceController extends Controller
                 'discount_percentage' => $service->discount_percentage,
                 'discount_expires_on' => $service->discount_expires_on,
                 'location' => $service->location,
-                'district' => $service->district->district_name,
-                'rating' => round($service->reviews_avg_rating, 1),
-                'total_reviews' => $service->reviews_count
+                'district' => $service->district ? $service->district->district_name : null,
+                'partner' => $service->partner ? [
+                    'id' => $service->partner->id,
+                    'business_name' => $service->partner->business_name,
+                    'business_logo' => $service->partner->business_logo
+                ] : null,
+                'rating' => round($service->reviews_avg_rating ?? 0, 1),
+                'total_reviews' => $service->reviews_count ?? 0
             ];
         });
 
         return response()->json([
             'status' => 'success',
-            'data' => $services
+            'data' => $services->items()
         ]);
     }
 } 

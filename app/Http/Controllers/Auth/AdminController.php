@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 
 class AdminController extends Controller
 {
@@ -23,13 +24,38 @@ class AdminController extends Controller
 
     /**
      * Login admin and create token
+     * 
+     * @param Request $request
+     * @return JsonResponse
      */
-    public function login(Request $request)
+    public function login(Request $request): JsonResponse
     {
-        $request->validate([
-            'username' => 'required|string',
-            'password' => 'required',
-        ]);
+        // Check if request body is empty
+        if (empty($request->all())) {
+            return response()->json([
+                'message' => 'Request body is required.',
+                'errors' => [
+                    'body' => ['The request body cannot be empty.']
+                ]
+            ], 400);
+        }
+
+        try {
+            $request->validate([
+                'username' => 'required|string',
+                'password' => 'required|string',
+            ], [
+                'username.required' => 'The username field is required.',
+                'username.string' => 'The username must be a string.',
+                'password.required' => 'The password field is required.',
+                'password.string' => 'The password must be a string.',
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'Validation failed.',
+                'errors' => $e->errors()
+            ], 422);
+        }
 
         // First check if user exists and is an admin
         $user = User::where(function($query) use ($request) {
@@ -40,9 +66,12 @@ class AdminController extends Controller
         ->first();
 
         if (!$user) {
-            throw ValidationException::withMessages([
-                'username' => ['No admin account found with these credentials.'],
-            ]);
+            return response()->json([
+                'message' => 'Authentication failed.',
+                'errors' => [
+                    'credentials' => ['Invalid credentials provided.']
+                ]
+            ], 401);
         }
 
         // Attempt login with credentials
@@ -59,48 +88,110 @@ class AdminController extends Controller
         }
 
         if (!$token = Auth::attempt($credentials)) {
-            throw ValidationException::withMessages([
-                'password' => ['The provided password is incorrect.'],
-            ]);
+            return response()->json([
+                'message' => 'Authentication failed.',
+                'errors' => [
+                    'credentials' => ['Invalid credentials provided.']
+                ]
+            ], 401);
         }
-
-        $user = Auth::user();
 
         return response()->json([
             'message' => 'Login successful',
-            'authorization' => [
+            'data' => [
                 'token' => $token
             ]
-        ]);
+        ], 200);
     }
 
     /**
      * Logout admin (Invalidate the token)
+     * 
+     * @return JsonResponse
      */
-    public function logout()
+    public function logout(): JsonResponse
     {
-        Auth::logout();
-        return response()->json(['message' => 'Successfully logged out']);
+        try {
+            Auth::logout();
+            return response()->json([
+                'message' => 'Successfully logged out'
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Logout failed.',
+                'errors' => [
+                    'general' => ['An error occurred while logging out. Please try again.']
+                ]
+            ], 500);
+        }
     }
 
     /**
      * Refresh a token
+     * 
+     * @return JsonResponse
      */
-    public function refresh()
+    public function refresh(): JsonResponse
     {
-        return response()->json([
-            'user' => Auth::user(),
-            'authorization' => [
-                'token' => Auth::refresh(),
-            ]
-        ]);
+        try {
+            return response()->json([
+                'message' => 'Token refreshed successfully',
+                'data' => [
+                    'token' => Auth::refresh()
+                ]
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Token refresh failed.',
+                'errors' => [
+                    'general' => ['An error occurred while refreshing the token. Please try again.']
+                ]
+            ], 500);
+        }
     }
 
     /**
      * Get the authenticated admin
+     * 
+     * @return JsonResponse
      */
-    public function user()
+    public function user(): JsonResponse
     {
-        return response()->json(Auth::user());
+        try {
+            $user = Auth::user();
+            
+            if (!$user) {
+                return response()->json([
+                    'message' => 'User not found.',
+                    'errors' => [
+                        'auth' => ['No authenticated user found.']
+                    ]
+                ], 404);
+            }
+
+            // Only return necessary user data
+            $userData = [
+                'id' => $user->id,
+                'user_name' => $user->user_name,
+                'email' => $user->email,
+                'user_type' => $user->user_type,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name
+            ];
+
+            return response()->json([
+                'message' => 'User data retrieved successfully',
+                'data' => [
+                    'user' => $userData
+                ]
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to retrieve user data.',
+                'errors' => [
+                    'general' => ['An error occurred while retrieving user data. Please try again.']
+                ]
+            ], 500);
+        }
     }
 } 

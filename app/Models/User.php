@@ -83,4 +83,28 @@ class User extends Authenticatable implements JWTSubject
    {
        return [];
    }
+
+   /**
+    * Get the partner associated with the user.
+    */
+   public function partner()
+   {
+       return $this->hasOne(Partner::class);
+   }
+
+   /**
+    * Get the tourist associated with the user.
+    */
+   public function tourist()
+   {
+       return $this->hasOne(Tourist::class);
+   }
+
+   /**
+    * Get the admin associated with the user.
+    */
+   public function admin()
+   {
+       return $this->hasOne(Admin::class);
+   }
 }
