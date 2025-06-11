@@ -87,4 +87,7 @@ Route::prefix('public')->group(function () {
     
     Route::get('/attractions', [PublicServiceController::class, 'attractions']);
     Route::get('/attractions/{service}', [PublicServiceController::class, 'show']);
+
+    // Service reviews endpoint
+    Route::get('/services/{service}/reviews', [PublicServiceController::class, 'getReviews']);
 });

@@ -192,4 +192,45 @@ class ServiceController extends Controller
             'data' => $services->items()
         ]);
     }
+
+    /**
+     * Get reviews for a specific service
+     */
+    public function getReviews(Service $service)
+    {
+        if ($service->status_visibility !== 'active') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Service not found'
+            ], 404);
+        }
+
+        $reviews = $service->reviews()
+            ->with(['tourist' => function($query) {
+                $query->select('id', 'first_name', 'last_name', 'profile_picture');
+            }])
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
+
+        // Transform the reviews to include tourist name
+        $reviews->getCollection()->transform(function ($review) {
+            return [
+                'id' => $review->id,
+                'title' => $review->title,
+                'rating' => $review->rating,
+                'review' => $review->review,
+                'created_at' => $review->created_at,
+                'tourist' => $review->tourist ? [
+                    'id' => $review->tourist->id,
+                    'name' => $review->tourist->first_name . ' ' . $review->tourist->last_name,
+                    'profile_picture' => $review->tourist->profile_picture
+                ] : null
+            ];
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $reviews->items()
+        ]);
+    }
 } 

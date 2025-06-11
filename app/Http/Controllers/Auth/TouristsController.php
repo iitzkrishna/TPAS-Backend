@@ -215,9 +215,7 @@ class TouristsController extends Controller
         return response()->json([
             'message' => 'Login successful',
             'data' => [
-                'authorization' => [
-                    'token' => $token
-                ]
+                'token' => $token
             ]
         ], 200);
     }
@@ -255,9 +253,7 @@ class TouristsController extends Controller
             return response()->json([
                 'message' => 'Token refreshed successfully',
                 'data' => [
-                    'authorization' => [
-                        'token' => Auth::refresh()
-                    ]
+                    'token' => Auth::refresh()
                 ]
             ], 200);
         } catch (\Exception $e) {

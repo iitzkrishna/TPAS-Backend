@@ -11,6 +11,7 @@ return new class extends Migration
         Schema::create('service_packages_reviews', function (Blueprint $table) {
             $table->id();
             $table->foreignId('service_id')->constrained('services')->onDelete('cascade');
+            $table->foreignId('tourist_id')->constrained('tourists')->onDelete('cascade');
             $table->string('title');
             $table->double('rating');
             $table->text('review');

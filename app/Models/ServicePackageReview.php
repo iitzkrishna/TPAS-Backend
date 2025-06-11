@@ -19,6 +19,7 @@ class ServicePackageReview extends Model
      */
     protected $fillable = [
         'service_id',
+        'tourist_id',
         'title',
         'rating',
         'review'
@@ -34,5 +35,13 @@ class ServicePackageReview extends Model
     public function service(): BelongsTo
     {
         return $this->belongsTo(Service::class);
+    }
+
+    /**
+     * Get the tourist who wrote the review.
+     */
+    public function tourist(): BelongsTo
+    {
+        return $this->belongsTo(Tourist::class);
     }
 } 
