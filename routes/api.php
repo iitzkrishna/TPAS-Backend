@@ -89,7 +89,7 @@ Route::prefix('public')->group(function () {
     Route::get('/attractions/{service}', [PublicServiceController::class, 'show']);
 
     // Service reviews endpoint
-    Route::get('/{service}/reviews', [PublicServiceController::class, 'getReviews']);
+    Route::get('service/{service}/reviews', [PublicServiceController::class, 'getReviews']);
 });
 
 // Partner routes with JWT authentication
