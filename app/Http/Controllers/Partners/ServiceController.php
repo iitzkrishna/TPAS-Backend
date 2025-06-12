@@ -103,11 +103,11 @@ class ServiceController extends Controller
 
         // Apply filters
         if ($request->has('type')) {
-            $query->ofType($request->type);
+            $query->where('type', $request->type);
         }
 
         if ($request->has('subtype')) {
-            $query->ofSubtype($request->subtype);
+            $query->where('subtype', $request->subtype);
         }
 
         if ($request->has('status')) {
@@ -123,7 +123,7 @@ class ServiceController extends Controller
         $sortDirection = $request->get('sort_direction', 'desc');
         $query->orderBy($sortField, $sortDirection);
 
-        $services = $query->paginate(15);
+        $services = $query->paginate(10);
 
         // Transform the response
         $services->getCollection()->transform(function ($service) {
@@ -139,10 +139,7 @@ class ServiceController extends Controller
                 'discount_expires_on' => $service->discount_expires_on,
                 'status_visibility' => $service->status_visibility,
                 'location' => $service->location,
-                'district' => [
-                    'id' => $service->district_id,
-                    'name' => $service->district ? $service->district->district_name : null
-                ],
+                'district_name' => $service->district ? $service->district->district_name : null,
                 'availability' => $service->availability,
                 'images' => $service->images->map(function ($image) {
                     return [
