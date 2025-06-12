@@ -25,6 +25,15 @@ class AuthJWTMiddleware
     {
         try {
             $user = JWTAuth::parseToken()->authenticate();
+
+            // Check if the route requires partner role
+            if ($request->is('api/partner/*') && $user->user_type !== 'partner') {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Unauthorized. Only partners can access this resource.'
+                ], 403);
+            }
+
         } catch (Exception $e) {
             if ($e instanceof \PHPOpenSourceSaver\JWTAuth\Exceptions\TokenInvalidException) {
                 return response()->json(['status' => 'Token is Invalid'], 403);
@@ -36,7 +45,7 @@ class AuthJWTMiddleware
                 return response()->json(['status' => 'Token is Blacklisted'], 400);
             }
             else {
-		        return response()->json(['status' => 'Authorization Token not found'], 404);
+                return response()->json(['status' => 'Authorization Token not found'], 404);
             }
         }
         return $next($request);

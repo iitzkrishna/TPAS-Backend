@@ -6,9 +6,9 @@ use App\Http\Middleware\AuthJWTMiddleware;
 use App\Http\Controllers\Auth\AdminController;
 use App\Http\Controllers\Auth\TouristsController;
 use App\Http\Controllers\Auth\PartnersController;
-use App\Http\Controllers\TouristSOSController;
 use App\Http\Controllers\Partners\ServiceController;
-use App\Http\Controllers\Public\ServiceController as PublicServiceController;
+use App\Http\Controllers\Public\PublicServiceController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -90,4 +90,18 @@ Route::prefix('public')->group(function () {
 
     // Service reviews endpoint
     Route::get('/services/{service}/reviews', [PublicServiceController::class, 'getReviews']);
+});
+
+// Partner routes with JWT authentication
+Route::prefix('partner')->middleware(['jwt'])->group(function () {
+    // Service management routes
+    Route::prefix('services')->group(function () {
+        Route::get('/', [ServiceController::class, 'index']);
+        Route::post('/', [ServiceController::class, 'store']);
+        Route::get('/types', [ServiceController::class, 'getServiceTypes']);
+        Route::get('/{service}', [ServiceController::class, 'show']);
+        Route::put('/{service}', [ServiceController::class, 'update']);
+        Route::delete('/{service}', [ServiceController::class, 'destroy']);
+        Route::delete('/{service}/images/{image}', [ServiceController::class, 'deleteServiceImage']);
+    });
 });

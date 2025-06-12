@@ -7,7 +7,7 @@ use App\Models\Service;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-class ServiceController extends Controller
+class PublicServiceController extends Controller
 {
     /**
      * List all active stays

@@ -3,13 +3,14 @@
 namespace App\Http\Controllers\Partners;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\ValidationException;
 use App\Models\Service;
 use App\Models\ServicePackageImage;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ServiceController extends Controller
 {
@@ -22,17 +23,6 @@ class ServiceController extends Controller
      * The base path for service images
      */
     protected $imageBasePath = 'services';
-
-    /**
-     * Create a new controller instance.
-     *
-     * @return void
-     */
-    public function __construct()
-    {
-        $this->middleware('jwt.auth');
-        $this->middleware('service.provider');
-    }
 
     /**
      * Store an image and return its path
@@ -86,40 +76,37 @@ class ServiceController extends Controller
     }
 
     /**
-     * List all services for the authenticated partner
+     * Display a listing of the services.
      */
     public function index(Request $request)
     {
-        $query = Auth::user()->serviceProvider->services();
+        $query = Service::query();
 
-        // Filter by type
+        // Apply filters
         if ($request->has('type')) {
-            $query->where('type', $request->type);
+            $query->ofType($request->type);
         }
 
-        // Filter by status
+        if ($request->has('subtype')) {
+            $query->ofSubtype($request->subtype);
+        }
+
         if ($request->has('status')) {
             $query->where('status_visibility', $request->status);
         }
 
-        // Filter by district
         if ($request->has('district_id')) {
             $query->where('district_id', $request->district_id);
         }
 
-        // Search by title
-        if ($request->has('search')) {
-            $query->where('title', 'like', '%' . $request->search . '%');
-        }
+        // Apply sorting
+        $sortField = $request->get('sort_by', 'created_at');
+        $sortDirection = $request->get('sort_direction', 'desc');
+        $query->orderBy($sortField, $sortDirection);
 
-        // Sort by
-        $sortBy = $request->get('sort_by', 'created_at');
-        $sortOrder = $request->get('sort_order', 'desc');
-        $query->orderBy($sortBy, $sortOrder);
+        $services = $query->paginate(15);
 
-        $services = $query->paginate(10);
-
-        // Add full URLs for images
+        // Add image URLs
         $services->getCollection()->transform(function ($service) {
             $service->thumbnail_url = $this->getImageUrl($service->thumbnail);
             $service->images->transform(function ($image) {
@@ -130,34 +117,50 @@ class ServiceController extends Controller
         });
 
         return response()->json([
-            'services' => $services
+            'status' => 'success',
+            'data' => $services
         ]);
     }
 
     /**
-     * Create a new service
+     * Store a newly created service.
      */
     public function store(Request $request)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
-            'type' => 'required|in:tour,accommodation,transport,activity,other',
+            'type' => ['required', Rule::in(array_keys(Service::getServiceTypes()))],
+            'subtype' => ['required', function ($attribute, $value, $fail) use ($request) {
+                if (!in_array($value, Service::getSubtypesForType($request->type))) {
+                    $fail('The selected subtype is invalid for the given type.');
+                }
+            }],
             'amount' => 'required|numeric|min:0',
-            'description' => 'required|string',
             'thumbnail' => 'required|image|max:2048|mimes:jpeg,png,jpg,gif,webp', // 2MB max
+            'description' => 'required|string',
             'discount_percentage' => 'nullable|numeric|min:0|max:100',
             'discount_expires_on' => 'nullable|date|after:today',
-            'status_visibility' => 'required|in:active,inactive,draft',
-            'location_latitude' => 'required|numeric',
-            'location_longitude' => 'required|numeric',
-            'district_id' => 'required|exists:districts,id',
+            'status_visibility' => ['required', Rule::in(array_values(Service::getConstants('STATUS_')))],
+            'location' => 'required|string',
+            'district_id' => 'required|exists:districts,district_id',
             'availability' => 'nullable|array',
             'images' => 'nullable|array|max:10', // Maximum 10 images
             'images.*' => 'image|max:2048|mimes:jpeg,png,jpg,gif,webp' // 2MB max per image
         ]);
 
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
         try {
-            $service = Auth::user()->serviceProvider->services()->create($request->except(['thumbnail', 'images']));
+            // Create service without images first
+            $data = $validator->validated();
+            $data['partner_id'] = auth()->user()->id;
+            $service = Service::create($data);
 
             // Handle thumbnail upload
             if ($request->hasFile('thumbnail')) {
@@ -182,9 +185,11 @@ class ServiceController extends Controller
             });
 
             return response()->json([
+                'status' => 'success',
                 'message' => 'Service created successfully',
-                'service' => $service
+                'data' => $service
             ], 201);
+
         } catch (\Exception $e) {
             // Clean up any uploaded files if service creation fails
             if (isset($service)) {
@@ -195,103 +200,16 @@ class ServiceController extends Controller
                 $service->delete();
             }
             
-            throw ValidationException::withMessages([
-                'error' => ['Failed to create service: ' . $e->getMessage()],
-            ]);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to create service',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
 
     /**
-     * Update a service
-     */
-    public function update(Request $request, Service $service)
-    {
-        // Check if the service belongs to the authenticated partner
-        if ($service->sp_id !== Auth::user()->serviceProvider->id) {
-            throw ValidationException::withMessages([
-                'service' => ['You are not authorized to update this service.'],
-            ]);
-        }
-
-        $request->validate([
-            'title' => 'sometimes|string|max:255',
-            'type' => 'sometimes|in:tour,accommodation,transport,activity,other',
-            'amount' => 'sometimes|numeric|min:0',
-            'description' => 'sometimes|string',
-            'thumbnail' => 'nullable|image|max:2048',
-            'discount_percentage' => 'nullable|numeric|min:0|max:100',
-            'discount_expires_on' => 'nullable|date|after:today',
-            'status_visibility' => 'sometimes|in:active,inactive,draft',
-            'location_latitude' => 'sometimes|numeric',
-            'location_longitude' => 'sometimes|numeric',
-            'district_id' => 'sometimes|exists:districts,id',
-            'availability' => 'nullable|array',
-            'images' => 'nullable|array',
-            'images.*' => 'image|max:2048'
-        ]);
-
-        $service->update($request->except(['thumbnail', 'images']));
-
-        // Handle thumbnail upload
-        if ($request->hasFile('thumbnail')) {
-            // Delete old thumbnail
-            $this->deleteImage($service->thumbnail);
-            $path = $this->storeImage($request->file('thumbnail'), 'thumbnails');
-            $service->update(['thumbnail' => $path]);
-        }
-
-        // Handle multiple images upload
-        if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $image) {
-                $path = $this->storeImage($image);
-                $service->images()->create(['image_key' => $path]);
-            }
-        }
-
-        // Load relationships and add URLs
-        $service->load('images');
-        $service->thumbnail_url = $this->getImageUrl($service->thumbnail);
-        $service->images->transform(function ($image) {
-            $image->url = $this->getImageUrl($image->image_key);
-            return $image;
-        });
-
-        return response()->json([
-            'message' => 'Service updated successfully',
-            'service' => $service
-        ]);
-    }
-
-    /**
-     * Delete a service
-     */
-    public function destroy(Service $service)
-    {
-        // Check if the service belongs to the authenticated partner
-        if ($service->sp_id !== Auth::user()->serviceProvider->id) {
-            throw ValidationException::withMessages([
-                'service' => ['You are not authorized to delete this service.'],
-            ]);
-        }
-
-        // Delete thumbnail
-        $this->deleteImage($service->thumbnail);
-
-        // Delete all images
-        foreach ($service->images as $image) {
-            $this->deleteImage($image->image_key);
-            $image->delete();
-        }
-
-        $service->delete();
-
-        return response()->json([
-            'message' => 'Service deleted successfully'
-        ]);
-    }
-
-    /**
-     * Get service details
+     * Display the specified service.
      */
     public function show(Service $service)
     {
@@ -303,8 +221,132 @@ class ServiceController extends Controller
         });
 
         return response()->json([
-            'service' => $service
+            'status' => 'success',
+            'data' => $service
         ]);
+    }
+
+    /**
+     * Update the specified service.
+     */
+    public function update(Request $request, Service $service)
+    {
+        // Check if the service belongs to the authenticated partner
+        if ($service->partner_id !== auth()->user()->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized to update this service'
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'title' => 'sometimes|required|string|max:255',
+            'type' => ['sometimes', 'required', Rule::in(array_keys(Service::getServiceTypes()))],
+            'subtype' => ['sometimes', 'required', function ($attribute, $value, $fail) use ($request) {
+                if (!in_array($value, Service::getSubtypesForType($request->type))) {
+                    $fail('The selected subtype is invalid for the given type.');
+                }
+            }],
+            'amount' => 'sometimes|required|numeric|min:0',
+            'thumbnail' => 'nullable|image|max:2048|mimes:jpeg,png,jpg,gif,webp',
+            'description' => 'sometimes|required|string',
+            'discount_percentage' => 'nullable|numeric|min:0|max:100',
+            'discount_expires_on' => 'nullable|date|after:today',
+            'status_visibility' => ['sometimes', 'required', Rule::in(array_values(Service::getConstants('STATUS_')))],
+            'location' => 'sometimes|required|string',
+            'district_id' => 'sometimes|required|exists:districts,district_id',
+            'availability' => 'nullable|array',
+            'images' => 'nullable|array|max:10',
+            'images.*' => 'image|max:2048|mimes:jpeg,png,jpg,gif,webp'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $data = $validator->validated();
+            $service->update($data);
+
+            // Handle thumbnail upload
+            if ($request->hasFile('thumbnail')) {
+                // Delete old thumbnail
+                $this->deleteImage($service->thumbnail);
+                $path = $this->storeImage($request->file('thumbnail'), 'thumbnails');
+                $service->update(['thumbnail' => $path]);
+            }
+
+            // Handle multiple images upload
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $image) {
+                    $path = $this->storeImage($image);
+                    $service->images()->create(['image_key' => $path]);
+                }
+            }
+
+            // Load relationships and add URLs
+            $service->load('images');
+            $service->thumbnail_url = $this->getImageUrl($service->thumbnail);
+            $service->images->transform(function ($image) {
+                $image->url = $this->getImageUrl($image->image_key);
+                return $image;
+            });
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Service updated successfully',
+                'data' => $service
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to update service',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Remove the specified service.
+     */
+    public function destroy(Service $service)
+    {
+        // Check if the service belongs to the authenticated partner
+        if ($service->partner_id !== auth()->user()->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized to delete this service'
+            ], 403);
+        }
+
+        try {
+            // Delete thumbnail
+            $this->deleteImage($service->thumbnail);
+
+            // Delete all images
+            foreach ($service->images as $image) {
+                $this->deleteImage($image->image_key);
+                $image->delete();
+            }
+
+            $service->delete();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Service deleted successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to delete service',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -313,24 +355,56 @@ class ServiceController extends Controller
     public function deleteServiceImage(Service $service, ServicePackageImage $image)
     {
         // Check if the service belongs to the authenticated partner
-        if ($service->sp_id !== Auth::user()->serviceProvider->id) {
-            throw ValidationException::withMessages([
-                'service' => ['You are not authorized to delete this image.'],
-            ]);
+        if ($service->partner_id !== auth()->user()->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized to delete this image'
+            ], 403);
         }
 
         // Check if the image belongs to the service
         if ($image->service_id !== $service->id) {
-            throw ValidationException::withMessages([
-                'image' => ['This image does not belong to the specified service.'],
-            ]);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'This image does not belong to the specified service'
+            ], 403);
         }
 
-        $this->deleteImage($image->image_key);
-        $image->delete();
+        try {
+            $this->deleteImage($image->image_key);
+            $image->delete();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Image deleted successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to delete image',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get all available service types and their subtypes.
+     */
+    public function getServiceTypes()
+    {
+        $types = Service::getServiceTypes();
+        $subtypes = [];
+
+        foreach ($types as $type => $label) {
+            $subtypes[$type] = Service::getSubtypesForType($type);
+        }
 
         return response()->json([
-            'message' => 'Image deleted successfully'
+            'status' => 'success',
+            'data' => [
+                'types' => $types,
+                'subtypes' => $subtypes
+            ]
         ]);
     }
 } 
