@@ -286,16 +286,93 @@ class ServiceController extends Controller
      */
     public function show(Service $service)
     {
-        $service->load(['images', 'reviews']);
-        $service->thumbnail_url = $this->getImageUrl($service->thumbnail);
-        $service->images->transform(function ($image) {
-            $image->url = $this->getImageUrl($image->image_key);
-            return $image;
-        });
+        // Check if the service belongs to the authenticated partner
+        if ($service->partner_id !== auth()->user()->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized to view this service'
+            ], 403);
+        }
+
+        // Load relationships
+        $service->load(['district:district_id,district_name', 'images']);
+
+        // Transform the response to match index format
+        $response = [
+            'id' => $service->id,
+            'title' => $service->title,
+            'type' => $service->type,
+            'subtype' => $service->subtype,
+            'amount' => $service->amount,
+            'thumbnail_url' => $this->getImageUrl($service->thumbnail),
+            'description' => $service->description,
+            'discount_percentage' => $service->discount_percentage,
+            'discount_expires_on' => $service->discount_expires_on,
+            'status_visibility' => $service->status_visibility,
+            'location' => $service->location,
+            'district' => [
+                'id' => $service->district_id,
+                'name' => $service->district ? $service->district->district_name : null
+            ],
+            'availability' => $service->availability,
+            'images' => $service->images->map(function ($image) {
+                return [
+                    'id' => $image->id,
+                    'url' => $this->getImageUrl($image->image_key)
+                ];
+            }),
+            'created_at' => $service->created_at,
+            'updated_at' => $service->updated_at
+        ];
 
         return response()->json([
             'status' => 'success',
-            'data' => $service
+            'data' => $response
+        ]);
+    }
+
+    /**
+     * Get reviews for a specific service.
+     */
+    public function getServiceReviews(Service $service)
+    {
+        // Check if the service belongs to the authenticated partner
+        if ($service->partner_id !== auth()->user()->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized to view reviews for this service'
+            ], 403);
+        }
+
+        $reviews = $service->reviews()
+            ->with(['tourist.user:id,name,email'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($review) {
+                return [
+                    'id' => $review->id,
+                    'title' => $review->title,
+                    'rating' => $review->rating,
+                    'review' => $review->review,
+                    'tourist' => $review->tourist ? [
+                        'id' => $review->tourist->id,
+                        'name' => $review->tourist->user ? $review->tourist->user->name : 'Anonymous',
+                        'email' => $review->tourist->user ? $review->tourist->user->email : null
+                    ] : null,
+                    'created_at' => $review->created_at
+                ];
+            });
+
+        // Calculate average rating
+        $averageRating = $reviews->avg('rating');
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'average_rating' => round($averageRating, 1),
+                'total_reviews' => $reviews->count(),
+                'reviews' => $reviews
+            ]
         ]);
     }
 

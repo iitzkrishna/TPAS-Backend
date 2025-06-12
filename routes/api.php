@@ -89,7 +89,7 @@ Route::prefix('public')->group(function () {
     Route::get('/attractions/{service}', [PublicServiceController::class, 'show']);
 
     // Service reviews endpoint
-    Route::get('/services/{service}/reviews', [PublicServiceController::class, 'getReviews']);
+    Route::get('/{service}/reviews', [PublicServiceController::class, 'getReviews']);
 });
 
 // Partner routes with JWT authentication
@@ -103,5 +103,6 @@ Route::prefix('partner')->middleware(['jwt'])->group(function () {
         Route::put('/{service}', [ServiceController::class, 'update']);
         Route::delete('/{service}', [ServiceController::class, 'destroy']);
         Route::delete('/{service}/images/{image}', [ServiceController::class, 'deleteServiceImage']);
+        Route::get('/{service}/reviews', [ServiceController::class, 'getServiceReviews']);
     });
 });
