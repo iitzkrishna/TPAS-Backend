@@ -185,7 +185,7 @@ class ServiceController extends Controller
             'description' => 'required|string',
             'discount_percentage' => 'nullable|numeric|min:0|max:100',
             'discount_expires_on' => 'nullable|date|after:today',
-            'status_visibility' => ['required', Rule::in(array_values(Service::getConstants('STATUS_')))],
+            'status_visibility' => 'required|in:active,inactive,draft',
             'location' => 'required|string',
             'district_id' => 'required|exists:districts,district_id',
             'availability' => 'nullable|array',
@@ -222,17 +222,45 @@ class ServiceController extends Controller
             }
 
             // Load relationships and add URLs
-            $service->load('images');
+            $service->load(['district:district_id,district_name', 'images']);
             $service->thumbnail_url = $this->getImageUrl($service->thumbnail);
             $service->images->transform(function ($image) {
                 $image->url = $this->getImageUrl($image->image_key);
                 return $image;
             });
 
+            // Transform the response to match index format
+            $response = [
+                'id' => $service->id,
+                'title' => $service->title,
+                'type' => $service->type,
+                'subtype' => $service->subtype,
+                'amount' => $service->amount,
+                'thumbnail_url' => $this->getImageUrl($service->thumbnail),
+                'description' => $service->description,
+                'discount_percentage' => $service->discount_percentage,
+                'discount_expires_on' => $service->discount_expires_on,
+                'status_visibility' => $service->status_visibility,
+                'location' => $service->location,
+                'district' => [
+                    'id' => $service->district_id,
+                    'name' => $service->district ? $service->district->district_name : null
+                ],
+                'availability' => $service->availability,
+                'images' => $service->images->map(function ($image) {
+                    return [
+                        'id' => $image->id,
+                        'url' => $this->getImageUrl($image->image_key)
+                    ];
+                }),
+                'created_at' => $service->created_at,
+                'updated_at' => $service->updated_at
+            ];
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Service created successfully',
-                'data' => $service
+                'data' => $response
             ], 201);
 
         } catch (\Exception $e) {
