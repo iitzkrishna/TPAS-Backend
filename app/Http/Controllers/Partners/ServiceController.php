@@ -391,9 +391,16 @@ class ServiceController extends Controller
 
         $validator = Validator::make($request->all(), [
             'title' => 'sometimes|required|string|max:255',
-            'type' => ['sometimes', 'required', Rule::in(array_keys(Service::getServiceTypes()))],
+            'type' => ['sometimes', 'required', Rule::in(['stay', 'rental', 'attraction', 'other'])],
             'subtype' => ['sometimes', 'required', function ($attribute, $value, $fail) use ($request) {
-                if (!in_array($value, Service::getSubtypesForType($request->type))) {
+                $validSubtypes = [
+                    'stay' => ['hotel', 'apartment', 'villa', 'guest_house', 'beach_house', 'farmhouse'],
+                    'rental' => ['cars', 'vans', 'tuktuk', 'motorcycles', 'airport-taxi', 'yatch', 'boat'],
+                    'attraction' => ['theme_park', 'museum', 'zoo', 'water_park', 'historical_site', 'nature_park', 'national_park'],
+                    'other' => ['other']
+                ];
+                
+                if (!isset($validSubtypes[$request->type]) || !in_array($value, $validSubtypes[$request->type])) {
                     $fail('The selected subtype is invalid for the given type.');
                 }
             }],
@@ -402,7 +409,7 @@ class ServiceController extends Controller
             'description' => 'sometimes|required|string',
             'discount_percentage' => 'nullable|numeric|min:0|max:100',
             'discount_expires_on' => 'nullable|date|after:today',
-            'status_visibility' => ['sometimes', 'required', Rule::in(array_values(Service::getConstants('STATUS_')))],
+            'status_visibility' => 'sometimes|required|in:active,inactive,draft',
             'location' => 'sometimes|required|string',
             'district_id' => 'sometimes|required|exists:districts,district_id',
             'availability' => 'nullable|array',
@@ -439,17 +446,45 @@ class ServiceController extends Controller
             }
 
             // Load relationships and add URLs
-            $service->load('images');
+            $service->load(['district:district_id,district_name', 'images']);
             $service->thumbnail_url = $this->getImageUrl($service->thumbnail);
             $service->images->transform(function ($image) {
                 $image->url = $this->getImageUrl($image->image_key);
                 return $image;
             });
 
+            // Transform the response to match index format
+            $response = [
+                'id' => $service->id,
+                'title' => $service->title,
+                'type' => $service->type,
+                'subtype' => $service->subtype,
+                'amount' => $service->amount,
+                'thumbnail_url' => $this->getImageUrl($service->thumbnail),
+                'description' => $service->description,
+                'discount_percentage' => $service->discount_percentage,
+                'discount_expires_on' => $service->discount_expires_on,
+                'status_visibility' => $service->status_visibility,
+                'location' => $service->location,
+                'district' => [
+                    'id' => $service->district_id,
+                    'name' => $service->district ? $service->district->district_name : null
+                ],
+                'availability' => $service->availability,
+                'images' => $service->images->map(function ($image) {
+                    return [
+                        'id' => $image->id,
+                        'url' => $this->getImageUrl($image->image_key)
+                    ];
+                }),
+                'created_at' => $service->created_at,
+                'updated_at' => $service->updated_at
+            ];
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Service updated successfully',
-                'data' => $service
+                'data' => $response
             ]);
 
         } catch (\Exception $e) {
