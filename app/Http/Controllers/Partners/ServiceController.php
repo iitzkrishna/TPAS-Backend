@@ -80,7 +80,26 @@ class ServiceController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Service::query();
+        $query = Service::query()
+            ->with(['district:district_id,district_name', 'images'])
+            ->select([
+                'id',
+                'partner_id',
+                'title',
+                'type',
+                'subtype',
+                'amount',
+                'thumbnail',
+                'description',
+                'discount_percentage',
+                'discount_expires_on',
+                'status_visibility',
+                'location',
+                'district_id',
+                'availability',
+                'created_at',
+                'updated_at'
+            ]);
 
         // Apply filters
         if ($request->has('type')) {
@@ -106,19 +125,45 @@ class ServiceController extends Controller
 
         $services = $query->paginate(15);
 
-        // Add image URLs
+        // Transform the response
         $services->getCollection()->transform(function ($service) {
-            $service->thumbnail_url = $this->getImageUrl($service->thumbnail);
-            $service->images->transform(function ($image) {
-                $image->url = $this->getImageUrl($image->image_key);
-                return $image;
-            });
-            return $service;
+            return [
+                'id' => $service->id,
+                'title' => $service->title,
+                'type' => $service->type,
+                'subtype' => $service->subtype,
+                'amount' => $service->amount,
+                'thumbnail_url' => $this->getImageUrl($service->thumbnail),
+                'description' => $service->description,
+                'discount_percentage' => $service->discount_percentage,
+                'discount_expires_on' => $service->discount_expires_on,
+                'status_visibility' => $service->status_visibility,
+                'location' => $service->location,
+                'district' => [
+                    'id' => $service->district_id,
+                    'name' => $service->district ? $service->district->district_name : null
+                ],
+                'availability' => $service->availability,
+                'images' => $service->images->map(function ($image) {
+                    return [
+                        'id' => $image->id,
+                        'url' => $this->getImageUrl($image->image_key)
+                    ];
+                }),
+                'created_at' => $service->created_at,
+                'updated_at' => $service->updated_at
+            ];
         });
 
         return response()->json([
             'status' => 'success',
-            'data' => $services
+            'data' => $services->items(),
+            'pagination' => [
+                'current_page' => $services->currentPage(),
+                'per_page' => $services->perPage(),
+                'total' => $services->total(),
+                'last_page' => $services->lastPage()
+            ]
         ]);
     }
 
