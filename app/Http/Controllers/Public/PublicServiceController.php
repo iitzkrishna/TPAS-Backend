@@ -173,15 +173,8 @@ class PublicServiceController extends Controller
                 'amount' => $service->amount,
                 'thumbnail' => $service->thumbnail,
                 'description' => $service->description,
-                'discount_percentage' => $service->discount_percentage,
-                'discount_expires_on' => $service->discount_expires_on,
                 'location' => $service->location,
                 'district' => $service->district ? $service->district->district_name : null,
-                'partner' => $service->partner ? [
-                    'id' => $service->partner->id,
-                    'business_name' => $service->partner->business_name,
-                    'business_logo' => $service->partner->business_logo
-                ] : null,
                 'rating' => round($service->reviews_avg_rating ?? 0, 1),
                 'total_reviews' => $service->reviews_count ?? 0
             ];
