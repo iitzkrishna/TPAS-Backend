@@ -207,7 +207,7 @@ class PublicServiceController extends Controller
                 $query->select('id', 'first_name', 'last_name', 'profile_picture');
             }])
             ->orderBy('created_at', 'desc')
-            ->paginate(10);
+            ->paginate(5);
 
         // Transform the reviews to include tourist name
         $reviews->getCollection()->transform(function ($review) {
