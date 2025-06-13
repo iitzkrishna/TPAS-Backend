@@ -8,6 +8,8 @@ use App\Http\Controllers\Auth\TouristsController;
 use App\Http\Controllers\Auth\PartnersController;
 use App\Http\Controllers\Partners\ServiceController;
 use App\Http\Controllers\Public\PublicServiceController;
+use App\Http\Controllers\Tourist\ServiceController as TouristServiceController;
+use App\Http\Controllers\Tourist\ServiceWishlistController;
 
 
 /*
@@ -51,6 +53,22 @@ Route::prefix('auth/tourist')->group(function () {
         // Route::post('location', [TouristSOSController::class, 'updateLocation']);
         // Route::get('location', [TouristSOSController::class, 'getCurrentLocation']);
         // Route::get('location/history', [TouristSOSController::class, 'getLocationHistory']);
+
+        // Wishlist routes
+        Route::prefix('wishlist')->group(function () {
+            Route::get('/', [ServiceWishlistController::class, 'getWishlist']);
+            Route::post('/', [ServiceWishlistController::class, 'addToWishlist']);
+            Route::delete('/{service}', [ServiceWishlistController::class, 'removeFromWishlist']);
+            Route::post('/{service}/review', [ServiceWishlistController::class, 'addRatingAndReview']);
+        });
+
+        // Service booking routes
+        Route::prefix('bookings')->group(function () {
+            Route::get('/active', [TouristServiceController::class, 'getActiveBookings']);
+            Route::get('/past', [TouristServiceController::class, 'getPastBookings']);
+            Route::get('/canceled', [TouristServiceController::class, 'getCanceledBookings']);
+            Route::get('/{booking}', [TouristServiceController::class, 'getBookingDetails']);
+        });
     });
 });
 

@@ -63,6 +63,7 @@ class DatabaseSeeder extends Seeder
             ServiceSeeder::class,
             ServicePackageReviewSeeder::class,
             ServiceBookingSeeder::class,
+            ServiceWishlistSeeder::class,
         ]);
     }
 }
