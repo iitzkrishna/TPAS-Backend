@@ -48,27 +48,6 @@ Route::prefix('auth/tourist')->group(function () {
         Route::get('user', [TouristsController::class, 'user']);
         Route::put('profile', [TouristsController::class, 'updateProfile']);
         Route::put('change-password', [TouristsController::class, 'changePassword']);
-
-        // Tourist specific routes
-        // Route::post('location', [TouristSOSController::class, 'updateLocation']);
-        // Route::get('location', [TouristSOSController::class, 'getCurrentLocation']);
-        // Route::get('location/history', [TouristSOSController::class, 'getLocationHistory']);
-
-        // Wishlist routes
-        Route::prefix('wishlist')->group(function () {
-            Route::get('/', [ServiceWishlistController::class, 'getWishlist']);
-            Route::post('/', [ServiceWishlistController::class, 'addToWishlist']);
-            Route::delete('/{service}', [ServiceWishlistController::class, 'removeFromWishlist']);
-            Route::post('/{service}/review', [ServiceWishlistController::class, 'addRatingAndReview']);
-        });
-
-        // Service booking routes
-        Route::prefix('bookings')->group(function () {
-            Route::get('/active', [TouristServiceController::class, 'getActiveBookings']);
-            Route::get('/past', [TouristServiceController::class, 'getPastBookings']);
-            Route::get('/canceled', [TouristServiceController::class, 'getCanceledBookings']);
-            Route::get('/{booking}', [TouristServiceController::class, 'getBookingDetails']);
-        });
     });
 });
 
@@ -123,4 +102,23 @@ Route::prefix('partner')->middleware(['jwt'])->group(function () {
         Route::delete('/{service}/images/{image}', [ServiceController::class, 'deleteServiceImage']);
         Route::get('/{service}/reviews', [ServiceController::class, 'getServiceReviews']);
     });
+});
+
+// Partner routes with JWT authentication
+Route::prefix('tourist')->middleware(['jwt'])->group(function () {    
+    // Wishlist routes
+    Route::prefix('wishlist')->group(function () {
+        Route::get('/', [ServiceWishlistController::class, 'getWishlist']);
+        Route::post('/', [ServiceWishlistController::class, 'addToWishlist']);
+        Route::delete('/{service}', [ServiceWishlistController::class, 'removeFromWishlist']);
+        Route::post('/{service}/review', [ServiceWishlistController::class, 'addRatingAndReview']);
+    });
+
+    // Service booking routes
+    Route::prefix('bookings')->group(function () {
+        Route::get('/active', [TouristServiceController::class, 'getActiveBookings']);
+        Route::get('/past', [TouristServiceController::class, 'getPastBookings']);
+        Route::get('/canceled', [TouristServiceController::class, 'getCanceledBookings']);
+        Route::get('/{booking}', [TouristServiceController::class, 'getBookingDetails']);
+    });    
 });
