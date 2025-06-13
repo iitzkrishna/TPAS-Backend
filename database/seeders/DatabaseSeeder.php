@@ -62,6 +62,7 @@ class DatabaseSeeder extends Seeder
             LocationSeeder::class,
             ServiceSeeder::class,
             ServicePackageReviewSeeder::class,
+            ServiceBookingSeeder::class,
         ]);
     }
 }
