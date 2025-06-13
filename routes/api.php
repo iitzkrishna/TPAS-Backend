@@ -10,7 +10,7 @@ use App\Http\Controllers\Partners\ServiceController;
 use App\Http\Controllers\Public\PublicServiceController;
 use App\Http\Controllers\Tourist\ServiceController as TouristServiceController;
 use App\Http\Controllers\Tourist\ServiceWishlistController;
-
+use App\Http\Controllers\Public\DistrictController;
 
 /*
 |--------------------------------------------------------------------------
@@ -87,6 +87,9 @@ Route::prefix('public')->group(function () {
 
     // Service reviews endpoint
     Route::get('service/{service}/reviews', [PublicServiceController::class, 'getReviews']);
+
+    // Districts endpoint
+    Route::get('/districts', [DistrictController::class, 'index']);
 });
 
 // Partner routes with JWT authentication
