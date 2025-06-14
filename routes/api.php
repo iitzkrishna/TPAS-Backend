@@ -11,6 +11,7 @@ use App\Http\Controllers\Public\PublicServiceController;
 use App\Http\Controllers\Tourist\ServiceController as TouristServiceController;
 use App\Http\Controllers\Tourist\ServiceWishlistController;
 use App\Http\Controllers\Public\DistrictController;
+use App\Http\Controllers\Tourist\TripController;
 
 /*
 |--------------------------------------------------------------------------
@@ -123,5 +124,12 @@ Route::prefix('tourist')->middleware(['jwt'])->group(function () {
         Route::get('/past', [TouristServiceController::class, 'getPastBookings']);
         Route::get('/canceled', [TouristServiceController::class, 'getCanceledBookings']);
         Route::get('/{booking}', [TouristServiceController::class, 'getBookingDetails']);
-    });    
+    });
+
+    // Tourist Trip Routes
+    Route::prefix('trip')->group(function () {
+        Route::post('/plan', [TripController::class, 'planTrip']);
+        Route::get('/{id}', [TripController::class, 'getTrip']);
+        Route::get('/completed', [TripController::class, 'getCompletedTrips']);
+    });
 });
