@@ -14,30 +14,16 @@ return new class extends Migration
             $table->date('start_date');
             $table->date('end_date');
             $table->enum('trip_type', ['solo', 'partner', 'friends', 'family']);
+            $table->json('destinations');  // Store district IDs as JSON array
+            $table->json('interests');     // Store interests as JSON array
             $table->enum('status', ['pending', 'processing', 'completed', 'failed'])->default('pending');
             $table->boolean('is_completed')->default(false);
-            $table->timestamps();
-        });
-
-        Schema::create('trip_destinations', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('trip_id')->constrained()->onDelete('cascade');
-            $table->foreignId('district_id')->constrained()->onDelete('cascade');
-            $table->timestamps();
-        });
-
-        Schema::create('trip_interests', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('trip_id')->constrained()->onDelete('cascade');
-            $table->foreignId('interest_id')->constrained()->onDelete('cascade');
             $table->timestamps();
         });
     }
 
     public function down()
     {
-        Schema::dropIfExists('trip_interests');
-        Schema::dropIfExists('trip_destinations');
         Schema::dropIfExists('trips');
     }
 }; 

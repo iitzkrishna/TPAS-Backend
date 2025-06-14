@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use App\Models\Service;
 use App\Models\ServicePackageReview;
+use App\Models\Tourist;
 use Carbon\Carbon;
 
 class ServicePackageReviewSeeder extends Seeder
@@ -19,6 +20,14 @@ class ServicePackageReviewSeeder extends Seeder
 
         if ($services->isEmpty()) {
             $this->command->info('No active services found. Please run ServiceSeeder first.');
+            return;
+        }
+
+        // Get all tourists
+        $tourists = Tourist::all();
+
+        if ($tourists->isEmpty()) {
+            $this->command->info('No tourists found. Please run TouristSeeder first.');
             return;
         }
 
@@ -141,6 +150,7 @@ class ServicePackageReviewSeeder extends Seeder
             foreach ($selectedReviews as $reviewData) {
                 ServicePackageReview::create([
                     'service_id' => $service->id,
+                    'tourist_id' => $tourists->random()->id, // Randomly select a tourist
                     ...$reviewData,
                     'created_at' => Carbon::now()->subDays(rand(1, 90)), // Random date within last 90 days
                     'updated_at' => Carbon::now()->subDays(rand(1, 90))

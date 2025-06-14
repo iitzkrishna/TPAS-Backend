@@ -20,7 +20,7 @@ class TripController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'destinations' => 'required|array',
-            'destinations.*' => 'exists:districts,id',
+            'destinations.*' => 'exists:districts,district_id',
             'startDate' => 'required|date|after:today',
             'endDate' => 'required|date|after:startDate',
             'tripType' => 'required|in:solo,partner,friends,family',
@@ -82,7 +82,7 @@ class TripController extends Controller
 
     private function generatePrompt(Trip $trip)
     {
-        $destinations = $trip->destinations->pluck('name')->join(', ');
+        $destinations = $trip->destinations->pluck('district_name')->join(', ');
         $interests = $trip->interests->pluck('name')->join(', ');
         
         return "Plan a {$trip->trip_type} trip to {$destinations} from {$trip->start_date} to {$trip->end_date}. " .
